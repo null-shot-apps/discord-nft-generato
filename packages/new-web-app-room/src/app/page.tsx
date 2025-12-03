@@ -171,7 +171,7 @@ export default function PixelNFTGenerator() {
             {pixelArt && (
               <div className="text-center">
                 <h3 className="text-2xl font-bold mb-6">
-                  Your Pixel NFT for "{username}"
+                  Your Pixel NFT for &quot;{username}&quot;
                 </h3>
                 
                 {/* Pixel Art Display */}
@@ -214,4 +214,5 @@ export default function PixelNFTGenerator() {
     </div>
   );
 }
+
 
