@@ -1,84 +1,217 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useState, useRef } from 'react';
 
-const slogans = [
-  "Turn chats into apps",
-  "Prompt. Ship. Repeat.",
-  "Build anything from a chat",
-  "Ideas → Apps, instantly",
-  "From zero to MVP in minutes",
-  "Your cofounder in the command line",
-  "Draft, iterate, deploy",
-  "Ship faster than you can type",
-  "Design in text, deliver in code",
-  "Dream it. Prompt it. Run it.",
-  "Chat-native app building",
-  "From prompt to product",
-  "One prompt, infinite apps",
-  "Stop scaffolding. Start shipping.",
-  "Prototype at the speed of thought",
-  "Make conversations executable"
-];
+// Simple hash function to convert string to number
+function hashString(str: string): number {
+  let hash = 0;
+  for (let i = 0; i < str.length; i++) {
+    const char = str.charCodeAt(i);
+    hash = ((hash << 5) - hash) + char;
+    hash = hash & hash; // Convert to 32-bit integer
+  }
+  return Math.abs(hash);
+}
 
-export default function Landing() {
-  const [currentIndex, setCurrentIndex] = useState(0);
-  const [isVisible, setIsVisible] = useState(true);
+// Generate deterministic colors based on hash
+function generateColors(hash: number): string[] {
+  const colors = [
+    '#FF6B6B', '#4ECDC4', '#45B7D1', '#96CEB4', '#FFEAA7',
+    '#DDA0DD', '#98D8C8', '#F7DC6F', '#BB8FCE', '#85C1E9',
+    '#F8C471', '#82E0AA', '#F1948A', '#85C1E9', '#D7BDE2',
+    '#A3E4D7', '#F9E79F', '#D5A6BD', '#AED6F1', '#A9DFBF'
+  ];
+  
+  const selectedColors = [];
+  let tempHash = hash;
+  
+  for (let i = 0; i < 8; i++) {
+    selectedColors.push(colors[tempHash % colors.length]);
+    tempHash = Math.floor(tempHash / colors.length);
+  }
+  
+  return selectedColors;
+}
 
-  useEffect(() => {
-    const interval = setInterval(() => {
-      setIsVisible(false);
-      setTimeout(() => {
-        setCurrentIndex((prev) => (prev + 1) % slogans.length);
-        setIsVisible(true);
-      }, 400);
-    }, 2800);
+// Generate 32x32 pixel art
+function generatePixelArt(username: string): string[][] {
+  const hash = hashString(username);
+  const colors = generateColors(hash);
+  const grid: string[][] = [];
+  
+  let seedValue = hash;
+  
+  // Simple pseudo-random number generator
+  function nextRandom(): number {
+    seedValue = (seedValue * 1103515245 + 12345) & 0x7fffffff;
+    return seedValue / 0x7fffffff;
+  }
+  
+  // Create base pattern (symmetric for punk-like appearance)
+  for (let y = 0; y < 32; y++) {
+    grid[y] = [];
+    for (let x = 0; x < 32; x++) {
+      const rand = nextRandom();
+      
+      // Create face outline (roughly centered)
+      if (y >= 8 && y <= 24 && x >= 8 && x <= 24) {
+        if (rand < 0.7) {
+          grid[y][x] = colors[Math.floor(nextRandom() * colors.length)];
+        } else {
+          grid[y][x] = 'transparent';
+        }
+      }
+      // Hair/accessories area
+      else if (y >= 4 && y <= 12 && x >= 6 && x <= 26) {
+        if (rand < 0.4) {
+          grid[y][x] = colors[Math.floor(nextRandom() * colors.length)];
+        } else {
+          grid[y][x] = 'transparent';
+        }
+      }
+      // Background/body
+      else if (y >= 20 && rand < 0.3) {
+        grid[y][x] = colors[Math.floor(nextRandom() * colors.length)];
+      } else {
+        grid[y][x] = 'transparent';
+      }
+    }
+  }
+  
+  return grid;
+}
 
-    return () => clearInterval(interval);
-  }, []);
+export default function PixelNFTGenerator() {
+  const [username, setUsername] = useState('');
+  const [pixelArt, setPixelArt] = useState<string[][] | null>(null);
+  const [isGenerating, setIsGenerating] = useState(false);
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+
+  const handleGenerate = () => {
+    if (!username.trim()) return;
+    
+    setIsGenerating(true);
+    
+    // Add a small delay for better UX
+    setTimeout(() => {
+      const art = generatePixelArt(username.trim());
+      setPixelArt(art);
+      setIsGenerating(false);
+    }, 500);
+  };
+
+  const downloadNFT = () => {
+    if (!pixelArt || !canvasRef.current) return;
+    
+    const canvas = canvasRef.current;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+    
+    canvas.width = 320; // 32x32 scaled up 10x
+    canvas.height = 320;
+    
+    // Draw pixel art
+    for (let y = 0; y < 32; y++) {
+      for (let x = 0; x < 32; x++) {
+        if (pixelArt[y][x] !== 'transparent') {
+          ctx.fillStyle = pixelArt[y][x];
+          ctx.fillRect(x * 10, y * 10, 10, 10);
+        }
+      }
+    }
+    
+    // Download
+    const link = document.createElement('a');
+    link.download = `${username}-pixel-nft.png`;
+    link.href = canvas.toDataURL();
+    link.click();
+  };
 
   return (
-    <div className="relative h-[100dvh] w-full overflow-hidden bg-black text-white">
-      {/* Enhanced animated aurora background layers */}
-      <div className="absolute inset-0 bg-aurora-layer-1" />
-      <div className="absolute inset-0 bg-aurora-layer-2" />
-      <div className="absolute inset-0 bg-aurora-layer-3" />
-      
-      {/* Floating particles overlay */}
-      <div className="absolute inset-0 bg-particles" />
-      
-      {/* Main content - centered */}
-      <main className="relative z-10 h-full flex flex-col items-center justify-center px-6">
-        <h1 className="text-center text-[clamp(28px,6vw,64px)] font-medium tracking-tight mb-4">
-          Turn Chats into Apps
-        </h1>
-        
-        {/* Rotating slogans */}
-        <div className="mt-4 h-8 md:h-10 overflow-hidden flex items-center justify-center">
-          <span
-            className={`inline-block text-center text-[clamp(18px,3vw,32px)] font-light transition-all duration-[400ms] ease-in-out ${
-              isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 -translate-y-2'
-            }`}
-          >
-            {slogans[currentIndex]}
-          </span>
+    <div className="min-h-screen bg-gradient-to-br from-purple-900 via-blue-900 to-indigo-900 text-white">
+      <div className="container mx-auto px-6 py-12">
+        {/* Header */}
+        <div className="text-center mb-12">
+          <h1 className="text-5xl font-bold mb-4 bg-gradient-to-r from-pink-400 to-purple-400 bg-clip-text text-transparent">
+            Discord → Pixel NFT
+          </h1>
+          <p className="text-xl text-gray-300">
+            Generate unique 32×32 CryptoPunk-style NFTs from any Discord username
+          </p>
         </div>
-      </main>
-      
-      {/* Start Prompting arrow pointing left - bottom left */}
-      <div className="absolute left-6 md:left-8 bottom-[5%] z-20 flex items-center gap-3 arrow-point-left">
-        <div className="flex items-center gap-2 text-white/80 font-medium text-sm md:text-base">
-          <svg 
-            className="w-5 h-5 md:w-6 md:h-6 animate-bounce-horizontal" 
-            fill="none" 
-            viewBox="0 0 24 24" 
-            stroke="currentColor"
-          >
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-          </svg>
-          <span>Start prompting</span>
+
+        {/* Generator Interface */}
+        <div className="max-w-4xl mx-auto">
+          <div className="bg-white/10 backdrop-blur-lg rounded-2xl p-8 border border-white/20">
+            {/* Input Section */}
+            <div className="mb-8">
+              <label className="block text-lg font-medium mb-4">
+                Enter Discord Username
+              </label>
+              <div className="flex gap-4">
+                <input
+                  type="text"
+                  value={username}
+                  onChange={(e) => setUsername(e.target.value)}
+                  placeholder="e.g. CoolGamer123"
+                  className="flex-1 px-4 py-3 bg-white/10 border border-white/30 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-400"
+                  onKeyPress={(e) => e.key === 'Enter' && handleGenerate()}
+                />
+                <button
+                  onClick={handleGenerate}
+                  disabled={!username.trim() || isGenerating}
+                  className="px-8 py-3 bg-gradient-to-r from-purple-500 to-pink-500 rounded-lg font-medium hover:from-purple-600 hover:to-pink-600 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+                >
+                  {isGenerating ? 'Generating...' : 'Generate NFT'}
+                </button>
+              </div>
+            </div>
+
+            {/* Result Section */}
+            {pixelArt && (
+              <div className="text-center">
+                <h3 className="text-2xl font-bold mb-6">
+                  Your Pixel NFT for "{username}"
+                </h3>
+                
+                {/* Pixel Art Display */}
+                <div className="inline-block bg-white/5 p-6 rounded-xl border border-white/20 mb-6">
+                  <div className="grid grid-cols-32 gap-0 w-80 h-80 mx-auto">
+                    {pixelArt.map((row, y) =>
+                      row.map((color, x) => (
+                        <div
+                          key={`${x}-${y}`}
+                          className="w-2.5 h-2.5"
+                          style={{
+                            backgroundColor: color === 'transparent' ? 'transparent' : color,
+                            border: color === 'transparent' ? 'none' : '1px solid rgba(255,255,255,0.1)'
+                          }}
+                        />
+                      ))
+                    )}
+                  </div>
+                </div>
+
+                {/* Download Button */}
+                <button
+                  onClick={downloadNFT}
+                  className="px-6 py-3 bg-gradient-to-r from-green-500 to-blue-500 rounded-lg font-medium hover:from-green-600 hover:to-blue-600 transition-all"
+                >
+                  Download PNG
+                </button>
+                
+                <p className="text-sm text-gray-400 mt-4">
+                  Same username always generates the same unique NFT
+                </p>
+              </div>
+            )}
+          </div>
         </div>
+
+        {/* Hidden canvas for download */}
+        <canvas ref={canvasRef} style={{ display: 'none' }} />
       </div>
     </div>
   );
 }
+
